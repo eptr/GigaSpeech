@@ -23,12 +23,14 @@ download_eval=true
 . ./utils/parse_options.sh || exit 1
 
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <gigaspeech-dataset-dir>"
-  echo " e.g.: $0 /disk1/audio_data/gigaspeech"
+if [ $# -ne 2 ]; then
+  echo "Usage: $0 <gigaspeech-download-dir> <gigaspeech-untar-dir>"
+  echo " e.g.: $0 /disk1/audio_data/gigaspeech /disk2/gigaspeech"
   echo ""
-  echo "This script downloads the entire GigaSpeech dataset"
-  echo "to your local dir <gigaspeech-dataset-dir>. "
+  echo "This script downloads the entire GigaSpeech dataset. The downloaded"
+  echo "archives (.tgz.aes/.tgz) are kept in <gigaspeech-download-dir>, and the"
+  echo "extracted dataset goes to <gigaspeech-untar-dir>. The two dirs can be"
+  echo "the same to get the old all-in-one layout."
   echo "options:"
   echo "  --with-dict true|false(default) download cmudict & g2p model"
   echo "  --stage stage(default 0) specifies from which stage to start with"
@@ -39,7 +41,9 @@ if [ $# -ne 1 ]; then
 fi
 
 gigaspeech_dataset_dir=$1
+untar_dir=$2
 mkdir -p $gigaspeech_dataset_dir || exit 1;
+mkdir -p $untar_dir || exit 1;
 
 # Check credentials.
 if [ ! -f SAFEBOX/password ]; then
@@ -152,6 +156,11 @@ fi
 
 if [[ "$host" == "oss" ]]; then
   # This is for SpeechColab collaborators, need 500G free space
+  if [ "$untar_dir" != "$gigaspeech_dataset_dir" ]; then
+    echo "$0: Error, the oss host downloads extracted audio directly, so"
+    echo "$0: <gigaspeech-download-dir> and <gigaspeech-untar-dir> must be the same."
+    exit 1
+  fi
   echo "$0: Downloading from the oss host..."
   utils/internal/download_gigaspeech_from_oss.sh \
     --stage $stage --with-dict $with_dict \
@@ -162,7 +171,7 @@ elif [[ "$host" == "tsinghua" || "$host" == "speechocean" || "$host" == "magicda
   utils/internal/download_gigaspeech_with_pyspeechcolab.sh \
     --host $host --subset $subset --with-dict $with_dict \
     --download-eval $download_eval \
-    $gigaspeech_dataset_dir || exit 1;
+    $gigaspeech_dataset_dir $untar_dir || exit 1;
 else
   echo "$0: Unsupported host: $host"
   exit 1
